@@ -1,34 +1,42 @@
 from flask import Flask, render_template_string
-import os
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    # Read the contents of agents.log if it exists
-    log_content = ""
-    log_file = "agents.log"
-    if os.path.exists(log_file):
-        with open(log_file, "r", encoding="utf-8") as f:
+    try:
+        # Open the log file with 'errors="replace"' to handle any encoding issues
+        with open("agents.log", "r", encoding="utf-8", errors="replace") as f:
             log_content = f.read()
-    # A simple HTML template to display the log contents
-    template = """
+    except FileNotFoundError:
+        log_content = "Log file not found."
+    except Exception as e:
+        log_content = f"Error reading log file: {e}"
+
+    html_template = """
     <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Agents Log</title>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Agent Log Viewer</title>
         <style>
-          body { font-family: monospace; background-color: #f4f4f4; padding: 20px; }
-          pre { background-color: #fff; padding: 10px; border: 1px solid #ddd; }
+            body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+            h1 { color: #333; }
+            pre { background: #fff; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+            .container { max-width: 800px; margin: auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); }
         </style>
-      </head>
-      <body>
-        <h1>Agents Log</h1>
-        <pre>{{ log_content }}</pre>
-      </body>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Agent Log Viewer</h1>
+            <pre>{{ log_content }}</pre>
+        </div>
+    </body>
     </html>
     """
-    return render_template_string(template, log_content=log_content)
+
+    return render_template_string(html_template, log_content=log_content)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -16,9 +16,9 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# Initialize the SentenceTransformer model globally.
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-embedding_dim = 384  # Dimension for this model
+# Initialize the SentenceTransformer model with the updated model and dimension.
+embedding_model = SentenceTransformer('all-mpnet-base-v2')
+embedding_dim = 768  # Updated embedding dimension for all-mpnet-base-v2
 
 # SQLite Database file (created in the current directory)
 DB_FILE = "ai_knowledge.db"
@@ -102,7 +102,6 @@ class AI_Agent:
         if existing:
             logging.info(f"{self.name}: I already know about '{topic}'. Retrieving from memory.")
             return existing
-
         knowledge = self.ask_deepseek(f"Teach me about {topic} as a {self.role}.")
         self.store_knowledge(topic, knowledge)
         logging.info(f"{self.name}: Learned '{topic}'. Knowledge stored.")
@@ -112,7 +111,7 @@ class AI_Agent:
         cursor = self.knowledge_db.cursor()
         cursor.execute("INSERT OR IGNORE INTO knowledge (topic, content) VALUES (?, ?)", (topic, content))
         self.knowledge_db.commit()
-        # Generate and add the vector representation using the NLP model
+        # Generate and add the vector representation using the SentenceTransformer model
         vector = self.generate_vector(content)
         self.index.add(np.array([vector], dtype=np.float32))
 
@@ -124,7 +123,6 @@ class AI_Agent:
 
     def generate_vector(self, text):
         """
-        Replaces the placeholder hash with a proper NLP embedding.
         Uses the SentenceTransformer model to encode the text into a fixed-size vector.
         """
         return embedding_model.encode(text)
@@ -137,7 +135,7 @@ class AI_Agent:
 async def autonomous_conversation(agents, rounds=5):
     """
     Simulates an autonomous conversation between agents asynchronously for a given number of rounds.
-    Every 2 rounds, context switching is triggered by letting the Creative AI propose a new topic.
+    After each round, there is a 30% chance that Creative AI will propose a new topic to switch context.
     """
     message = "Hello, let's begin our autonomous conversation."
     current_agent_index = 0
@@ -152,8 +150,8 @@ async def autonomous_conversation(agents, rounds=5):
         message = reply
         current_agent_index = (current_agent_index + 1) % len(agents)
         await asyncio.sleep(2)
-        # Context switching: every 2 rounds, ask the Creative AI for a new topic.
-        if (i + 1) % 2 == 0:
+        # Context switching: with a 30% chance, trigger Creative AI to propose a new topic.
+        if random.random() < 0.3:
             creative_agent = next((agent for agent in agents if agent.role == "Creative"), None)
             if creative_agent:
                 new_topic_prompt = "Propose a new creative conversation topic."
@@ -192,7 +190,7 @@ async def main():
         strategist_ai, creative_ai, data_analyst_ai
     ]
     
-    # Start the asynchronous autonomous conversation with increased rounds.
+    # Start the asynchronous autonomous conversation with the updated context switching.
     await autonomous_conversation(agents, rounds=5)
 
 if __name__ == "__main__":
